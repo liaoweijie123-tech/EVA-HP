@@ -1,0 +1,3 @@
+# Upload staging area: local zip archive and helper script, not part of the release
+/_upload/
+*.zip
