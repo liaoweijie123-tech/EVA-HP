@@ -226,17 +226,18 @@ angles = ts["joint_angles"]   # (K, 20) degrees
 
 ## 8. License and citation
 
-* **License:** `<to be completed — e.g. CC BY 4.0 for the data, MIT for the code>`
-* **Persistent identifier:** `<Zenodo / Figshare DOI to be inserted>`
+* **License:** data **CC BY 4.0**, code **MIT**.
+* **Persistent identifier (concept DOI, always resolves to the latest version):**
+  [`10.5281/zenodo.23508803`](https://doi.org/10.5281/zenodo.23508803)
 * **Citation:**
 
 ```bibtex
 @article{liao_sgformer_semg,
   title   = {A Method for Improving Fine-Grained Hand Motion Estimation Accuracy Based on SG-Former},
-  author  = {<authors>},
+  author  = {Liao, Weijie and others},
   journal = {Sensors},
-  year    = {<year>},
-  note    = {Dataset: EVA-HP}
+  year    = {2025},
+  note    = {Dataset: EVA-HP, \url{https://doi.org/10.5281/zenodo.23508803}}
 }
 ```
 
