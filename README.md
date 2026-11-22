@@ -21,7 +21,7 @@ intended for research on continuous hand-kinematic estimation from sEMG.
 | sEMG | Myo armband, **8 channels**, **200 Hz**, right forearm proximal |
 | Reference pose | Intel RealSense RGB + MediaPipe Hands, **21 landmarks → 20 joint angles**, ~30–35 Hz, interpolated to 200 Hz |
 
-> **Total size of this release: ≈354 MB.**
+> **Total size of this release: ≈678 MB.**
 
 ---
 
@@ -35,9 +35,12 @@ EVA-HP_release/
 │   │   └── subject1/ … subject6/  {1..8}.h5
 │   ├── split/                   # the same recordings divided into train/test parts
 │   │   └── subject1/ … subject6/  {1..8}_{train,test}.hdf5
+│   ├── preprocessed/            # training-ready data (filtered, RMS, normalised)
+│   │   └── subject1/ … subject6/  S<sub>_M<mot>_{train,val,test}.hdf5
 │   └── scalers/                 # per-subject normalisation statistics
 │       ├── per_subject_scalers.npz
 │       └── per_subject_scalers_raw.npz
+├── videos/                      # supplementary videos
 └── code/
     └── process_eva_hp.py        # preprocessing: filtering, RMS, normalisation
 ```
@@ -88,7 +91,27 @@ The structured dataset has four fields, all of length K:
 | `skeleton` | (K, 63) | float32 | 21 landmarks × (x, y, z), image-normalised |
 | `time` | (K,) | float64 | Monotonic timestamp, seconds |
 
-### 3.3 Normalisation statistics — `data/scalers/per_subject_scalers.npz`
+### 3.3 Training-ready data — `data/preprocessed/subject<N>/S<sub>_M<mot>_{train,val,test}.hdf5`
+
+These files are the direct output of `code/process_eva_hp.py`: synchronised, filtered,
+RMS-enveloped and min–max normalised to [0, 1]. They are what the model consumes, and they
+carry the three-way split used in the paper (Section 4).
+
+| Path | Shape | dtype | Description |
+|---|---|---|---|
+| `neuropose/timeseries` | (K,) | structured | fields below |
+| `neuropose` attrs | — | — | `sample_rate = 200` |
+
+| Field | Shape | dtype | Description |
+|---|---|---|---|
+| `emg` | (K, 8) | float32 | normalised RMS envelope |
+| `joint_angles` | (K, 20) | float32 | normalised joint angles |
+| `skeleton` | (K, 63) | float32 | zero placeholder, carries no information |
+| `time` | (K,) | float64 | sample index on the 200 Hz base |
+| `user_id` | (K,) | int32 | subject index |
+| `motion_id` | (K,) | int32 | motion index (1–8) |
+
+### 3.4 Normalisation statistics — `data/scalers/per_subject_scalers.npz`
 
 A NumPy archive with one entry per subject (`s1` … `s6`), each a dictionary of four arrays of
 length 8 (EMG) or 20 (angles):
@@ -121,6 +144,22 @@ The split is **within each recording**, along the repetition axis, and is **cont
 
 > **Note for reproduction.** The exact repetition boundaries are fixed by the files shipped in
 > `data/split/`; using those files reproduces the paper's split exactly.
+
+### 4.1 Three-way split used in the paper
+
+For every subject and motion the 10 repetitions are divided as follows, and the resulting
+blocks are shipped in `data/preprocessed/`:
+
+| Split | Repetitions | Share | Files |
+|---|---|---|---|
+| training | 1–6 | 60 % | `S<sub>_M<mot>_train.hdf5` |
+| validation | 7 | 10 % | `S<sub>_M<mot>_val.hdf5` |
+| test | 8–10 | 30 % | `S<sub>_M<mot>_test.hdf5` |
+
+The test block is identical to the `*_test.hdf5` files in `data/split/` (last three
+repetitions), so results are directly comparable. The validation block is carved out of the
+first seven repetitions and is used **only** for checkpoint selection; the test block is
+evaluated once, after training.
 
 ---
 
