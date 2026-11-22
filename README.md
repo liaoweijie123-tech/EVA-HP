@@ -33,8 +33,8 @@ EVA-HP_release/
 ├── data/
 │   ├── raw/                     # 48 original recordings, one file per subject and motion
 │   │   └── subject1/ … subject6/  {1..8}.h5
-│   ├── split/                   # the same recordings divided into train/test parts
-│   │   └── subject1/ … subject6/  {1..8}_{train,test}.hdf5
+│   ├── split/                   # the same recordings divided into train/val/test parts
+│   │   └── subject1/ … subject6/  {1..8}_{train,val,test}.hdf5
 │   ├── preprocessed/            # training-ready data (filtered, RMS, normalised)
 │   │   └── subject1/ … subject6/  S<sub>_M<mot>_{train,val,test}.hdf5
 │   └── scalers/                 # per-subject normalisation statistics
@@ -74,7 +74,7 @@ One HDF5 file per subject and motion, containing **two streams acquired asynchro
 > persisted. `hand_rate` is ~30–35 Hz while `emg_rate` is 200 Hz, hence the streams have
 > different lengths (M ≠ N).
 
-### 3.2 Split segments — `data/split/subject<N>/<M>_{train,test}.hdf5`
+### 3.2 Split segments — `data/split/subject<N>/<M>_{train,val,test}.hdf5`
 
 Each file stores one **already synchronised** segment at 200 Hz:
 
@@ -126,40 +126,29 @@ is not used in the paper.
 
 ---
 
-## 4. Train / test split
+## 4. Train / validation / test split
 
-The split is **within each recording**, along the repetition axis, and is **contiguous in time**:
-
-* For every subject and motion, the 10 repetitions are divided into a **training part** and a
-  **test part**, giving `<M>_train.hdf5` and `<M>_test.hdf5`.
-* The **first 7 repetitions (≈70 % of the recording) form the training part** and the **last 3
-  repetitions (≈30 %) the test part**. For example, `subject1/1.h5` has 14 170 samples
-  (≈71 s), of which the first 9 707 samples (0–48.6 s) are training and the remaining 4 455
-  samples (48.6–71.0 s) are test.
-* The same rule is applied to all 48 recordings, including the 8-second motion
-  (`subject1/6.h5`: 15 394 training samples covering 0–77.2 s, 6 864 test samples covering
-  77.2–111.6 s).
-* **The test repetitions are never used to fit the normalisation statistics**, which are computed
-  from `*_train.hdf5` only (see `process_eva_hp.py`).
-
-> **Note for reproduction.** The exact repetition boundaries are fixed by the files shipped in
-> `data/split/`; using those files reproduces the paper's split exactly.
-
-### 4.1 Three-way split used in the paper
-
-For every subject and motion the 10 repetitions are divided as follows, and the resulting
-blocks are shipped in `data/preprocessed/`:
+The split is **within each recording**, along the repetition axis, and is **contiguous in time**.
+For every subject and motion the 10 repetitions are divided into three blocks:
 
 | Split | Repetitions | Share | Files |
 |---|---|---|---|
-| training | 1–6 | 60 % | `S<sub>_M<mot>_train.hdf5` |
-| validation | 7 | 10 % | `S<sub>_M<mot>_val.hdf5` |
-| test | 8–10 | 30 % | `S<sub>_M<mot>_test.hdf5` |
+| training | 1–6 | 60 % | `<M>_train.hdf5` |
+| validation | 7 | 10 % | `<M>_val.hdf5` |
+| test | 8–10 | 30 % | `<M>_test.hdf5` |
 
-The test block is identical to the `*_test.hdf5` files in `data/split/` (last three
-repetitions), so results are directly comparable. The validation block is carved out of the
-first seven repetitions and is used **only** for checkpoint selection; the test block is
-evaluated once, after training.
+For example, `subject1/1.h5` yields **8 220** training samples (repetitions 1–6), **1 387**
+validation samples (repetition 7) and **4 455** test samples (repetitions 8–10). The same rule
+is applied to all 48 recordings, including the 8-second motion.
+
+* The validation block is used **only** for checkpoint selection; the test block is evaluated
+  once, after training, with the retained checkpoint.
+* **Neither the validation nor the test repetitions are used to fit the normalisation
+  statistics**, which are computed from the training split only (see `process_eva_hp.py`).
+
+> **Note for reproduction.** The exact repetition boundaries are fixed by the files shipped in
+> `data/split/`; using those files reproduces the paper's split exactly. The same three blocks
+> appear, already filtered and normalised, in `data/preprocessed/`.
 
 ---
 
